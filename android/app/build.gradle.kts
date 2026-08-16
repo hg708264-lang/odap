@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.wrong_answer_note"
-    compileSdk = flutter.compileSdkVersion
+    // file_picker's Android dependency requires API 36 or newer.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
