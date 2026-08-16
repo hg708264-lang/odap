@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +33,7 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
   final _picker = ImagePicker();
   final _textController = TextEditingController();
   XFile? _image;
+  Uint8List? _imageBytes;
   PlatformFile? _pdf;
 
   @override
@@ -43,12 +44,18 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
 
   Future<void> _takePhoto() async {
     final photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-    if (photo != null && mounted) setState(() => _image = photo);
+    if (photo != null && mounted) {
+      final bytes = await photo.readAsBytes();
+      if (mounted) setState(() { _image = photo; _imageBytes = bytes; });
+    }
   }
 
   Future<void> _pickImage() async {
     final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (image != null && mounted) setState(() => _image = image);
+    if (image != null && mounted) {
+      final bytes = await image.readAsBytes();
+      if (mounted) setState(() { _image = image; _imageBytes = bytes; });
+    }
   }
 
   Future<void> _pickPdf() async {
@@ -98,8 +105,9 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
             _ActionCard(icon: Icons.picture_as_pdf_outlined, label: 'PDF 파일 선택', wide: true, onTap: _pickPdf),
             if (_image != null) ...[
               const SizedBox(height: 20),
-              ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.file(File(_image!.path), height: 190, width: double.infinity, fit: BoxFit.cover)),
-              TextButton.icon(onPressed: () => setState(() => _image = null), icon: const Icon(Icons.close), label: const Text('사진 제거')),
+              if (_imageBytes != null)
+                ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.memory(_imageBytes!, height: 190, width: double.infinity, fit: BoxFit.cover)),
+              TextButton.icon(onPressed: () => setState(() { _image = null; _imageBytes = null; }), icon: const Icon(Icons.close), label: const Text('사진 제거')),
             ],
             if (_pdf != null) ...[
               const SizedBox(height: 20),
