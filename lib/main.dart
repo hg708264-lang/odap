@@ -56,7 +56,9 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
       type: FileType.custom,
       allowedExtensions: ['pdf'],
     );
-    if (result != null && mounted) setState(() => _pdf = result.files.single);
+    if (result != null && result.isNotEmpty && mounted) {
+      setState(() => _pdf = result.single);
+    }
   }
 
   Future<void> _pasteText() async {
