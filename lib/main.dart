@@ -59,7 +59,11 @@ class _HomePageState extends State<HomePage> {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final notes = snapshot.data ?? [];
           if (notes.isEmpty) return const Center(child: Text('아직 저장한 오답이 없어요.\n아래 버튼으로 첫 오답을 추가해 보세요.', textAlign: TextAlign.center));
-          return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView.builder(padding: const EdgeInsets.all(16), itemCount: notes.length, itemBuilder: (_, i) => Card(child: ListTile(leading: const Icon(Icons.assignment_outlined), title: Text((notes[i]['content'] as String?)?.isNotEmpty == true ? notes[i]['content'] as String : '첨부 문제'), subtitle: Text('${notes[i]['reason'] ?? '이유 미설정'} · ${notes[i]['source_type'] as String? ?? 'text'}')))));
+          return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView.builder(padding: const EdgeInsets.all(16), itemCount: notes.length, itemBuilder: (_, i) {
+            final reasons = ((notes[i]['reason'] as String?) ?? '이유 미설정').split(',').where((e) => e.isNotEmpty).toList();
+            final hearts = (notes[i]['review_count'] as int?) ?? 0;
+            return Card(child: ListTile(leading: const Icon(Icons.assignment_outlined), title: Text((notes[i]['content'] as String?)?.isNotEmpty == true ? notes[i]['content'] as String : '첨부 문제'), subtitle: Text('${reasons.join(' · ')} · ${notes[i]['source_type'] as String? ?? 'text'}', style: TextStyle(color: reasons.length >= 2 ? Colors.red : null)), trailing: Wrap(children: [IconButton(icon: Icon(Icons.favorite, color: hearts > 0 ? Colors.red : Colors.grey), onPressed: () async { await Supabase.instance.client.from('notes').update({'review_count': hearts + 1}).eq('id', notes[i]['id']); setState(_load); }), if (hearts > 0) Text('$hearts')])));
+          }));
         }),
         floatingActionButton: FloatingActionButton.extended(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadProblemPage())).then((_) => setState(_load)), icon: const Icon(Icons.add), label: const Text('오답 추가')),
       );
@@ -115,7 +119,7 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
   XFile? _image;
   Uint8List? _imageBytes;
   PlatformFile? _pdf;
-  String _reason = '계산실수';
+  final Set<String> _reasons = {'계산실수'};
 
   @override
   void dispose() {
@@ -162,7 +166,7 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
       return;
     }
     final content = _textController.text.trim();
-    Supabase.instance.client.from('notes').insert({'user_id': Supabase.instance.client.auth.currentUser!.id, 'content': content, 'reason': _reason, 'source_type': _pdf != null ? 'pdf' : (_image != null ? 'image' : 'text')}).then((_) {
+    Supabase.instance.client.from('notes').insert({'user_id': Supabase.instance.client.auth.currentUser!.id, 'content': content, 'reason': _reasons.join(','), 'review_count': 0, 'source_type': _pdf != null ? 'pdf' : (_image != null ? 'image' : 'text')}).then((_) {
       if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
     }).catchError((_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장에 실패했어요. Supabase notes 테이블을 확인해 주세요.')));
@@ -203,7 +207,7 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
             Row(children: [Text('문제 텍스트', style: Theme.of(context).textTheme.titleMedium), const Spacer(), TextButton.icon(onPressed: _pasteText, icon: const Icon(Icons.content_paste), label: const Text('붙여넣기'))]),
             TextField(controller: _textController, minLines: 6, maxLines: 12, decoration: const InputDecoration(hintText: '문제를 복사해서 붙여넣거나 직접 입력하세요.', border: OutlineInputBorder())),
             const SizedBox(height: 24),
-            DropdownButtonFormField<String>(value: _reason, decoration: const InputDecoration(labelText: '틀린 이유', border: OutlineInputBorder()), items: const [DropdownMenuItem(value: '계산실수', child: Text('계산실수')), DropdownMenuItem(value: '유형 취약', child: Text('유형 취약')), DropdownMenuItem(value: '조건 해석', child: Text('조건 해석')), DropdownMenuItem(value: '개념 오류', child: Text('개념 오류'))], onChanged: (value) { if (value != null) setState(() => _reason = value); }),
+            InputDecorator(decoration: const InputDecoration(labelText: '틀린 이유(복수 선택 가능)', border: OutlineInputBorder()), child: Wrap(spacing: 8, children: ['계산실수', '유형 취약', '조건 해석', '개념 오류'].map((reason) => FilterChip(label: Text(reason), selected: _reasons.contains(reason), selectedColor: Colors.indigo.shade100, onSelected: (selected) => setState(() { if (selected) { _reasons.add(reason); } else if (_reasons.length > 1) { _reasons.remove(reason); } })).toList())),
             const SizedBox(height: 24),
             FilledButton.icon(onPressed: _save, icon: const Icon(Icons.add_task), label: const Text('오답노트에 추가'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52))),
           ],

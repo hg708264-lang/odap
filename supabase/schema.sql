@@ -3,11 +3,13 @@ create table if not exists public.notes (
   user_id uuid not null references auth.users(id) on delete cascade,
   content text not null default '',
   reason text not null default '계산실수',
+  review_count integer not null default 0,
   source_type text not null default 'text',
   created_at timestamptz not null default now()
 );
 
 alter table public.notes add column if not exists reason text not null default '계산실수';
+alter table public.notes add column if not exists review_count integer not null default 0;
 
 alter table public.notes enable row level security;
 drop policy if exists "Users can read their notes" on public.notes;
