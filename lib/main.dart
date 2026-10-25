@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final auth = Supabase.instance.client.auth;
       if (signUp) {
-        await auth.signUp(email: email.text.trim(), password: password.text);
+        await auth.signUp(email: email.text.trim(), password: password.text, emailRedirectTo: 'https://hg708264-lang.github.io/odap/');
       } else {
         await auth.signInWithPassword(email: email.text.trim(), password: password.text);
       }
