@@ -80,13 +80,15 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final auth = Supabase.instance.client.auth;
       if (signUp) {
-        await auth.signUp(email: email.text.trim(), password: password.text);
+        await auth.signUp(email: email.text.trim(), password: password.text, emailRedirectTo: Uri.base.origin + Uri.base.path);
       } else {
         await auth.signInWithPassword(email: email.text.trim(), password: password.text);
       }
       if (mounted && signUp) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('가입 완료! 이메일 인증이 필요할 수 있어요.')));
     } on AuthException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Supabase 연결 오류: $e')));
     } finally { if (mounted) setState(() => busy = false); }
   }
   @override
