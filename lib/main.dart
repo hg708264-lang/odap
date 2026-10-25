@@ -6,12 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const _supabaseUrl = 'https://shxcutdsun gjzaclm ykmk.supabase.co';
+const _supabaseUrl = 'https://shxcutdsungjzaclmykm.supabase.co';
 const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoeGN1dGRzdW5nanphY2xteWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MTc0NzIsImV4cCI6MjEwODQ5MzQ3Mn0.XnRzOxJxn3KlENLFk-yRFzuL3VF0H4YWd1Rzn-v9BDI';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(url: _supabaseUrl.replaceAll(' ', ''), anonKey: _supabaseAnonKey);
+  await Supabase.initialize(url: _supabaseUrl, anonKey: _supabaseAnonKey);
   runApp(const WrongAnswerApp());
 }
 
