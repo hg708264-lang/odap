@@ -160,6 +160,19 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
     }
   }
 
+  Widget _reasonChip(String reason) => FilterChip(
+        label: Text(reason),
+        selected: _reasons.contains(reason),
+        selectedColor: Colors.indigo.shade100,
+        onSelected: (selected) => setState(() {
+          if (selected) {
+            _reasons.add(reason);
+          } else if (_reasons.length > 1) {
+            _reasons.remove(reason);
+          }
+        }),
+      );
+
   void _save() {
     if (_image == null && _pdf == null && _textController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('문제 사진, PDF 또는 텍스트를 추가해 주세요.')));
@@ -207,7 +220,7 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
             Row(children: [Text('문제 텍스트', style: Theme.of(context).textTheme.titleMedium), const Spacer(), TextButton.icon(onPressed: _pasteText, icon: const Icon(Icons.content_paste), label: const Text('붙여넣기'))]),
             TextField(controller: _textController, minLines: 6, maxLines: 12, decoration: const InputDecoration(hintText: '문제를 복사해서 붙여넣거나 직접 입력하세요.', border: OutlineInputBorder())),
             const SizedBox(height: 24),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('틀린 이유(복수 선택 가능)'), Wrap(spacing: 8, children: ['계산실수', '유형 취약', '조건 해석', '개념 오류'].map<Widget>((reason) => FilterChip(label: Text(reason), selected: _reasons.contains(reason), selectedColor: Colors.indigo.shade100, onSelected: (selected) => setState(() { if (selected) { _reasons.add(reason); } else if (_reasons.length > 1) { _reasons.remove(reason); } })).toList())]),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('틀린 이유(복수 선택 가능)'), Wrap(spacing: 8, children: [_reasonChip('계산실수'), _reasonChip('유형 취약'), _reasonChip('조건 해석'), _reasonChip('개념 오류')])]),
             const SizedBox(height: 24),
             FilledButton.icon(onPressed: _save, icon: const Icon(Icons.add_task), label: const Text('오답노트에 추가'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52))),
           ],
