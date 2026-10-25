@@ -80,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final auth = Supabase.instance.client.auth;
       if (signUp) {
-        await auth.signUp(email: email.text.trim(), password: password.text, emailRedirectTo: Uri.base.origin + Uri.base.path);
+        await auth.signUp(email: email.text.trim(), password: password.text);
       } else {
         await auth.signInWithPassword(email: email.text.trim(), password: password.text);
       }
