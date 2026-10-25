@@ -16,5 +16,7 @@ alter table public.notes add column if not exists image_data text;
 alter table public.notes enable row level security;
 drop policy if exists "Users can read their notes" on public.notes;
 drop policy if exists "Users can create their notes" on public.notes;
+drop policy if exists "Users can update their notes" on public.notes;
 create policy "Users can read their notes" on public.notes for select using (auth.uid() = user_id);
 create policy "Users can create their notes" on public.notes for insert with check (auth.uid() = user_id);
+create policy "Users can update their notes" on public.notes for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
