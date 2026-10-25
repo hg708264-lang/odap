@@ -97,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
     TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: '비밀번호', border: OutlineInputBorder())), const SizedBox(height: 16),
     FilledButton(onPressed: busy ? null : submit, child: Text(busy ? '처리 중...' : (signUp ? '회원가입' : '로그인'))),
     TextButton(onPressed: () => setState(() => signUp = !signUp), child: Text(signUp ? '이미 계정이 있어요' : '처음 사용하시나요? 회원가입')),
-  ]))));
+  ])))));
 }
 
 class UploadProblemPage extends StatefulWidget {
