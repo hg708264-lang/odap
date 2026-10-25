@@ -7,5 +7,7 @@ create table if not exists public.notes (
 );
 
 alter table public.notes enable row level security;
+drop policy if exists "Users can read their notes" on public.notes;
+drop policy if exists "Users can create their notes" on public.notes;
 create policy "Users can read their notes" on public.notes for select using (auth.uid() = user_id);
 create policy "Users can create their notes" on public.notes for insert with check (auth.uid() = user_id);
