@@ -4,8 +4,16 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() => runApp(const WrongAnswerApp());
+const _supabaseUrl = 'https://shxcutdsun gjzaclm ykmk.supabase.co';
+const _supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoeGN1dGRzdW5nanphY2xteWttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MTc0NzIsImV4cCI6MjEwODQ5MzQ3Mn0.XnRzOxJxn3KlENLFk-yRFzuL3VF0H4YWd1Rzn-v9BDI';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(url: _supabaseUrl.replaceAll(' ', ''), anonKey: _supabaseAnonKey);
+  runApp(const WrongAnswerApp());
+}
 
 class WrongAnswerApp extends StatelessWidget {
   const WrongAnswerApp({super.key});
@@ -18,8 +26,54 @@ class WrongAnswerApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff4b5fc0)),
           useMaterial3: true,
         ),
-        home: const UploadProblemPage(),
+        home: const AuthGate(),
       );
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+  @override
+  Widget build(BuildContext context) => StreamBuilder<AuthState>(
+        stream: Supabase.instance.client.auth.onAuthStateChange,
+        builder: (_, snapshot) => Supabase.instance.client.auth.currentSession == null
+            ? const LoginPage()
+            : const UploadProblemPage(),
+      );
+}
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final email = TextEditingController();
+  final password = TextEditingController();
+  bool signUp = false, busy = false;
+  Future<void> submit() async {
+    setState(() => busy = true);
+    try {
+      final auth = Supabase.instance.client.auth;
+      if (signUp) {
+        await auth.signUp(email: email.text.trim(), password: password.text);
+      } else {
+        await auth.signInWithPassword(email: email.text.trim(), password: password.text);
+      }
+      if (mounted && signUp) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('가입 완료! 이메일 인증이 필요할 수 있어요.')));
+    } on AuthException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally { if (mounted) setState(() => busy = false); }
+  }
+  @override
+  Widget build(BuildContext context) => Scaffold(body: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+    Text('오답노트', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)), const SizedBox(height: 8),
+    Text(signUp ? '계정을 만들고 어디서나 이어서 공부하세요.' : '로그인하면 오답이 기기 간 동기화됩니다.'), const SizedBox(height: 24),
+    TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: '이메일', border: OutlineInputBorder())), const SizedBox(height: 12),
+    TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: '비밀번호', border: OutlineInputBorder())), const SizedBox(height: 16),
+    FilledButton(onPressed: busy ? null : submit, child: Text(busy ? '처리 중...' : (signUp ? '회원가입' : '로그인'))),
+    TextButton(onPressed: () => setState(() => signUp = !signUp), child: Text(signUp ? '이미 계정이 있어요' : '처음 사용하시나요? 회원가입')),
+  ]))));
 }
 
 class UploadProblemPage extends StatefulWidget {
@@ -80,14 +134,19 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('문제 사진, PDF 또는 텍스트를 추가해 주세요.')));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('문제를 오답노트에 추가했어요.')));
+    final content = _textController.text.trim();
+    Supabase.instance.client.from('notes').insert({'user_id': Supabase.instance.client.auth.currentUser!.id, 'content': content, 'source_type': _pdf != null ? 'pdf' : (_image != null ? 'image' : 'text')}).then((_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('문제를 오답노트에 저장했어요.')));
+    }).catchError((_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장에 실패했어요. Supabase notes 테이블을 확인해 주세요.')));
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('새 오답 추가')),
+      appBar: AppBar(title: const Text('새 오답 추가'), actions: [IconButton(tooltip: '로그아웃', onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
