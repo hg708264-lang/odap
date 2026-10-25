@@ -37,7 +37,31 @@ class AuthGate extends StatelessWidget {
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (_, snapshot) => Supabase.instance.client.auth.currentSession == null
             ? const LoginPage()
-            : const UploadProblemPage(),
+            : const HomePage(),
+      );
+}
+
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late Future<List<Map<String, dynamic>>> _notes;
+  @override
+  void initState() { super.initState(); _load(); }
+  void _load() { _notes = Supabase.instance.client.from('notes').select().order('created_at', ascending: false); }
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('오답노트'), actions: [IconButton(onPressed: () => Supabase.instance.client.auth.signOut(), icon: const Icon(Icons.logout))]),
+        body: FutureBuilder<List<Map<String, dynamic>>>(future: _notes, builder: (_, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          final notes = snapshot.data ?? [];
+          if (notes.isEmpty) return const Center(child: Text('아직 저장한 오답이 없어요.\n아래 버튼으로 첫 오답을 추가해 보세요.', textAlign: TextAlign.center));
+          return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView.builder(padding: const EdgeInsets.all(16), itemCount: notes.length, itemBuilder: (_, i) => Card(child: ListTile(leading: const Icon(Icons.assignment_outlined), title: Text((notes[i]['content'] as String?)?.isNotEmpty == true ? notes[i]['content'] as String : '첨부 문제'), subtitle: Text(notes[i]['source_type'] as String? ?? 'text')))));
+        }),
+        floatingActionButton: FloatingActionButton.extended(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadProblemPage())).then((_) => setState(_load)), icon: const Icon(Icons.add), label: const Text('오답 추가')),
       );
 }
 
@@ -136,7 +160,7 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
     }
     final content = _textController.text.trim();
     Supabase.instance.client.from('notes').insert({'user_id': Supabase.instance.client.auth.currentUser!.id, 'content': content, 'source_type': _pdf != null ? 'pdf' : (_image != null ? 'image' : 'text')}).then((_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('문제를 오답노트에 저장했어요.')));
+      if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
     }).catchError((_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장에 실패했어요. Supabase notes 테이블을 확인해 주세요.')));
     });
