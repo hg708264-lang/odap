@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -62,7 +63,7 @@ class _HomePageState extends State<HomePage> {
           return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView.builder(padding: const EdgeInsets.all(16), itemCount: notes.length, itemBuilder: (_, i) {
             final reasons = ((notes[i]['reason'] as String?) ?? '이유 미설정').split(',').where((e) => e.isNotEmpty).toList();
             final hearts = (notes[i]['review_count'] as int?) ?? 0;
-            return Card(child: ListTile(onTap: () async { await Supabase.instance.client.from('notes').update({'review_count': hearts + 1}).eq('id', notes[i]['id']); if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => ProblemDetailPage(note: notes[i]))).then((_) => setState(_load)); }, leading: const Icon(Icons.assignment_outlined), title: Text((notes[i]['content'] as String?)?.isNotEmpty == true ? notes[i]['content'] as String : '첨부 문제'), subtitle: Text('${reasons.join(' · ')} · ${notes[i]['source_type'] as String? ?? 'text'}', style: TextStyle(color: reasons.length >= 2 ? Colors.red : null)), trailing: Wrap(children: [IconButton(icon: Icon(Icons.favorite, color: hearts > 0 ? Colors.red : Colors.grey), onPressed: () async { await Supabase.instance.client.from('notes').update({'review_count': hearts + 1}).eq('id', notes[i]['id']); setState(_load); }), if (hearts > 0) Text('$hearts')])));
+            return Card(child: ListTile(onTap: () async { await Supabase.instance.client.from('notes').update({'review_count': hearts + 1}).eq('id', notes[i]['id']); if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => ProblemDetailPage(note: notes[i]))).then((_) => setState(_load)); }, leading: const Icon(Icons.assignment_outlined), title: Text((notes[i]['content'] as String?)?.isNotEmpty == true ? notes[i]['content'] as String : '첨부 문제'), subtitle: Text('${reasons.join(' · ')} · 다시 본 횟수: $hearts회', style: TextStyle(color: reasons.length >= 2 ? Colors.red : null)), trailing: Icon(Icons.favorite, color: hearts > 0 ? Colors.red : Colors.grey)));
           }));
         }),
         floatingActionButton: FloatingActionButton.extended(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadProblemPage())).then((_) => setState(_load)), icon: const Icon(Icons.add), label: const Text('오답 추가')),
@@ -76,6 +77,7 @@ class ProblemDetailPage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('오답 상세')),
         body: Padding(padding: const EdgeInsets.all(24), child: ListView(children: [
+          if ((note['image_data'] as String?)?.isNotEmpty == true) Image.memory(base64Decode(note['image_data'] as String), height: 300, fit: BoxFit.contain),
           Text(note['content'] as String? ?? '첨부 문제', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 24),
           Text('틀린 이유: ${note['reason'] ?? '미설정'}', style: const TextStyle(color: Colors.red)),
@@ -195,7 +197,7 @@ class _UploadProblemPageState extends State<UploadProblemPage> {
       return;
     }
     final content = _textController.text.trim();
-    Supabase.instance.client.from('notes').insert({'user_id': Supabase.instance.client.auth.currentUser!.id, 'content': content, 'reason': _reasons.join(','), 'review_count': 0, 'source_type': _pdf != null ? 'pdf' : (_image != null ? 'image' : 'text')}).then((_) {
+    Supabase.instance.client.from('notes').insert({'user_id': Supabase.instance.client.auth.currentUser!.id, 'content': content, 'reason': _reasons.join(','), 'review_count': 0, 'image_data': _imageBytes == null ? null : base64Encode(_imageBytes!), 'source_type': _pdf != null ? 'pdf' : (_image != null ? 'image' : 'text')}).then((_) {
       if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
     }).catchError((_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장에 실패했어요. Supabase notes 테이블을 확인해 주세요.')));
