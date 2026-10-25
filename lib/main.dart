@@ -62,10 +62,26 @@ class _HomePageState extends State<HomePage> {
           return RefreshIndicator(onRefresh: () async => setState(_load), child: ListView.builder(padding: const EdgeInsets.all(16), itemCount: notes.length, itemBuilder: (_, i) {
             final reasons = ((notes[i]['reason'] as String?) ?? '이유 미설정').split(',').where((e) => e.isNotEmpty).toList();
             final hearts = (notes[i]['review_count'] as int?) ?? 0;
-            return Card(child: ListTile(leading: const Icon(Icons.assignment_outlined), title: Text((notes[i]['content'] as String?)?.isNotEmpty == true ? notes[i]['content'] as String : '첨부 문제'), subtitle: Text('${reasons.join(' · ')} · ${notes[i]['source_type'] as String? ?? 'text'}', style: TextStyle(color: reasons.length >= 2 ? Colors.red : null)), trailing: Wrap(children: [IconButton(icon: Icon(Icons.favorite, color: hearts > 0 ? Colors.red : Colors.grey), onPressed: () async { await Supabase.instance.client.from('notes').update({'review_count': hearts + 1}).eq('id', notes[i]['id']); setState(_load); }), if (hearts > 0) Text('$hearts')])));
+            return Card(child: ListTile(onTap: () async { await Supabase.instance.client.from('notes').update({'review_count': hearts + 1}).eq('id', notes[i]['id']); if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => ProblemDetailPage(note: notes[i]))).then((_) => setState(_load)); }, leading: const Icon(Icons.assignment_outlined), title: Text((notes[i]['content'] as String?)?.isNotEmpty == true ? notes[i]['content'] as String : '첨부 문제'), subtitle: Text('${reasons.join(' · ')} · ${notes[i]['source_type'] as String? ?? 'text'}', style: TextStyle(color: reasons.length >= 2 ? Colors.red : null)), trailing: Wrap(children: [IconButton(icon: Icon(Icons.favorite, color: hearts > 0 ? Colors.red : Colors.grey), onPressed: () async { await Supabase.instance.client.from('notes').update({'review_count': hearts + 1}).eq('id', notes[i]['id']); setState(_load); }), if (hearts > 0) Text('$hearts')])));
           }));
         }),
         floatingActionButton: FloatingActionButton.extended(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadProblemPage())).then((_) => setState(_load)), icon: const Icon(Icons.add), label: const Text('오답 추가')),
+      );
+}
+
+class ProblemDetailPage extends StatelessWidget {
+  const ProblemDetailPage({super.key, required this.note});
+  final Map<String, dynamic> note;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('오답 상세')),
+        body: Padding(padding: const EdgeInsets.all(24), child: ListView(children: [
+          Text(note['content'] as String? ?? '첨부 문제', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 24),
+          Text('틀린 이유: ${note['reason'] ?? '미설정'}', style: const TextStyle(color: Colors.red)),
+          const SizedBox(height: 12),
+          Text('다시 본 횟수: ${(note['review_count'] as int? ?? 0) + 1}회'),
+        ])),
       );
 }
 
